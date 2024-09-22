@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Headache Chat</title>
+    <style>
+        body, html {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background-color: #2c3e50;
+            color: #ecf0f1;
+        }
+        #chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #34495e;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+        #chat-header {
+            background-color: #2c3e50;
+            padding: 20px;
+            text-align: center;
+        }
+        #chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background-color: #34495e;
+        }
+        #chat-input {
+            display: flex;
+            padding: 20px;
+            background-color: #2c3e50;
+        }
+        #user-input {
+            flex-grow: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #ecf0f1;
+            color: #2c3e50;
+        }
+        button {
+            padding: 10px 20px;
+            margin-left: 10px;
+            background-color: #3498db;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .ai-content-toggle {
+            cursor: pointer;
+            color: #3498db;
+            text-decoration: underline;
+        }
+        .ai-content {
+            background-color: #2c3e50;
+            border: 1px solid #34495e;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+            display: none;
+        }
+        .loader {
+            border: 4px solid #34495e;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-left: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .slide-down {
+            animation: slideDown 0.5s;
+        }
+        @keyframes slideDown {
+            from { max-height: 0; opacity: 0; }
+            to { max-height: 500px; opacity: 1; }
+        }
+        .tts-button {
+            background-color: #2ecc71;
+            margin-top: 10px;
+        }
+        .tts-button:hover {
+            background-color: #27ae60;
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <div id="chat-header">
+            <h1>Headache Chat</h1>
+        </div>
+        <div id="chat-messages"></div>
+        <div id="chat-input">
+            <input type="text" id="user-input" placeholder="Type your message...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        let currentSpeech = null;
+
+        function sendMessage() {
+            const userInput = document.getElementById('user-input');
+            const chatMessages = document.getElementById('chat-messages');
+            const message = userInput.value.trim();
+
+            if (message) {
+                // Display user message
+                chatMessages.innerHTML += `<p class="fade-in"><strong>You:</strong> ${message}</p>`;
+                userInput.value = '';
+
+                // Perform similarity search
+                fetch('/similarity_search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Display similarity search results
+                    let similarityHtml = '<p class="fade-in"><strong>Similar Questions:</strong></p>';
+                    data.similarity_results.forEach(result => {
+                        similarityHtml += `
+                            <p class="fade-in">Q: ${result.question}<br>
+                            A: ${result.answer}<br>
+                            Similarity: ${result.similarity}</p>
+                        `;
+                    });
+                    chatMessages.innerHTML += similarityHtml;
+
+                    // Add AI content section
+                    const aiContentId = Date.now();
+                    chatMessages.innerHTML += `
+                        <p class="fade-in">
+                            <span class="ai-content-toggle" onclick="toggleAIContent('${aiContentId}')">▼ AI generated content</span>
+                        </p>
+                        <div id="${aiContentId}" class="ai-content">
+                            <span class="loader"></span> Generating AI response...
+                        </div>
+                    `;
+
+                    // Generate LLM response
+                    fetch('/llm_response', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: message }),
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        const aiContentElement = document.getElementById(aiContentId);
+                        aiContentElement.innerHTML = `
+                            <p class="fade-in">${data.llm_response}</p>
+                            <button class="tts-button" onclick="toggleSpeech('${aiContentId}')">Play Speech</button>
+                        `;
+                    })
+                    .catch(error => console.error('Error:', error));
+
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                })
+                .catch(error => console.error('Error:', error));
+            }
+        }
+
+        function toggleAIContent(contentId) {
+            const content = document.getElementById(contentId);
+            const toggle = content.previousElementSibling.querySelector('.ai-content-toggle');
+            if (content.style.display === 'none' || content.style.display === '') {
+                content.style.display = 'block';
+                content.classList.add('slide-down');
+                toggle.textContent = '▲ AI generated content';
+            } else {
+                content.style.display = 'none';
+                content.classList.remove('slide-down');
+                toggle.textContent = '▼ AI generated content';
+                stopSpeech();
+            }
+        }
+
+        function toggleSpeech(contentId) {
+            const content = document.getElementById(contentId);
+            const text = content.querySelector('p').textContent;
+            const button = content.querySelector('.tts-button');
+
+            if (window.speechSynthesis.speaking) {
+                stopSpeech();
+                button.textContent = 'Play Speech';
+            } else {
+                speakText(text, button);
+                button.textContent = 'Stop Speech';
+            }
+        }
+
+        function speakText(text) {
+            stopSpeech();
+
+            currentSpeech = new SpeechSynthesisUtterance(text);
+            currentSpeech.lang = 'en-US';
+            currentSpeech.rate = 1;
+            currentSpeech.pitch = 1;
+
+            // Disable looping
+            currentSpeech.onend = function() {
+                button.textContent = 'Play Speech';
+            };
+
+            window.speechSynthesis.speak(currentSpeech);
+        }
+
+        function stopSpeech() {
+            if (window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+            }
+            currentSpeech = null;
+        }
+
+        // Allow sending message with Enter key
+        document.getElementById('user-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
