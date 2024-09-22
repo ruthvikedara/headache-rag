@@ -108,7 +108,17 @@ def perform_similarity_search():
 @app.route('/llm_response', methods=['POST'])
 def generate_llm_response():
     user_message = request.json['message']
+    k = 3 # Get top 3 similar questions
     
+    # Perform similarity search to get context
+    similarity_results = similarity_search(user_message, db, k=k)
+
+    # Build context string from top k results
+    context_string = ""
+    for i in range(k):
+        question, answer, _ = similarity_results[i]
+        context_string += f"**Question {i+1}:** {question}\n**Answer {i+1}:** {answer}\n\n"
+
     # Generate LLM response
     prompt = f'''
     <|begin_of_text|><|start_header_id|>system<|end_header_id|>
@@ -116,6 +126,11 @@ def generate_llm_response():
     You are a helpful, confident assistant to a neurologist in an Indian corporate hospital. Your goal is to answer questions that patients might have related only to headaches.
     Only give them useful, helpful, positive advice. Try and reassure the patient. Give your answer with respect to the Indian context you are dealing with.
     Do not answer if you don't know something, say that you don't know. Ask them to talk to the physician to know more.
+
+    Here's some context from a database of similar questions and answers:
+
+    {context_string}
+
     <|eot_id|>
     <|start_header_id|>user<|end_header_id|>
 
