@@ -11,10 +11,10 @@ import atexit
 app = Flask(__name__)
 
 # Initialize your models and database
-llama3_8b = "/Users/ruthvik/.cache/lm-studio/models/lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
+MODELPATH = "path/to/model"
 
 llm = LlamaCpp(
-    model_path=llama3_8b,
+    model_path=MODELPATH,
     n_gpu_layers=1,
     n_batch=512,
     n_ctx=2048,
@@ -51,7 +51,7 @@ def create_vector_database(csv_file, model):
 
   return vector_database
 
-db = create_vector_database('data2/headache_qna.csv', embed_model)
+db = create_vector_database('headache_qna.csv', embed_model)
 
 def similarity_search(query,vector_database,model=embed_model, k=2):
   """Performs a similarity search on the vector database.
