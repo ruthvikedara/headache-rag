@@ -4,8 +4,7 @@ HeadacheBot is a minimal chatbot designed to assist neurologists by answering co
 
 **Motivation:** Specialist physicians like neurologists often have very high patient loads and not enough time to answer all of their questions. This project is a proof of concept that could help allievate some workload off of busy neurologists by answering simple questions related to headaches.
 
-![App_demo](https://github.com/user-attachments/assets/560115ee-abf0-4350-9b9b-5e39a4830aec)
-
+![Headacheassistant-ezgif com-optimize](https://github.com/user-attachments/assets/56fe034c-8be2-45ad-bd2a-7242d15e4905)
 
 ## Features
 - Efficient Answer Retrieval: Uses sentence embeddings to find the most relevant answer from a pre-defined set of questions.
